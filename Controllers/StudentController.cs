@@ -1,5 +1,7 @@
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using StudentAPI.Data;
 
 namespace StudentAPI.Controllers{
 
@@ -7,33 +9,23 @@ namespace StudentAPI.Controllers{
     [ApiController]
     public class StudentController:ControllerBase
     {
-        static private List<Student> students= new List<Student>{
-            new Student{
-                Id=1,
-                StudentName="Brian Muriuki",
-                AdminNo="SC201/0656/2018"
-            },
-            new Student{
-                Id=2,
-                StudentName="Geoffery",
-                AdminNo="KIM/49381/18"
-            },
-            new Student{
-                Id=3,
-                StudentName="Brian Muriuki",
-                AdminNo="SC201/0656/2018"
-            },
-        };
 
+        private readonly StudentDbContext _dbContext;
+
+        public StudentController(StudentDbContext dbContext){
+            _dbContext = dbContext;
+        }
+       
         [HttpGet]
-        public ActionResult <List<Student>> GetAllStudents(){
-            return Ok(students);
+        public async Task<ActionResult <List<Student>>> GetAllStudents(){
+
+            return Ok(await _dbContext.Students.ToListAsync());
         }
 
         [HttpGet("{id}")]
-        public ActionResult<Student> GetStudentById(int id){
+        public async Task<ActionResult<Student>> GetStudentById(int id){
             
-            var student= students.FirstOrDefault(x=>x.Id==id);
+            var student= await _dbContext.Students.FindAsync(id);
             if(student==null)
             return NotFound();
 
@@ -41,35 +33,40 @@ namespace StudentAPI.Controllers{
         }
 
         [HttpPost]
-        public ActionResult<Student> AddStudent(Student newStudent){
+        public async Task <ActionResult<Student>> AddStudent(Student newStudent){
             if(newStudent==null)
             return BadRequest();
 
-            newStudent.Id = students.Max(x=>x.Id) + 1;
-            students.Add(newStudent);
+            _dbContext.Students.Add(newStudent);
+            await _dbContext.SaveChangesAsync();
+
             return CreatedAtAction(nameof(GetStudentById),new {id=newStudent.Id}, newStudent);
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdatedStudent(Student updateStudent, int id){
-            var student = students.FirstOrDefault(x=>x.Id==id);
+        public async Task <IActionResult> UpdatedStudent(Student updateStudent, int id){
+            var student = await _dbContext.Students.FindAsync(id);
             if(student==null)
             return NotFound();
 
             student.AdminNo = updateStudent.AdminNo;
             student.StudentName= updateStudent.StudentName;
 
+            await _dbContext.SaveChangesAsync();
+
             return NoContent();
 
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteStudent (int id){
-            var student = students.FirstOrDefault(x=>x.Id==id);
+        public async Task<ActionResult> DeleteStudent (int id){
+            var student = await _dbContext.Students.FindAsync(id);
             if(student==null)
             return NotFound();
 
-            students.Remove(student);
+             _dbContext.Students.Remove(student);
+            await _dbContext.SaveChangesAsync();
+
             return NoContent();
         }
 
